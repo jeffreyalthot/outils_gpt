@@ -50,3 +50,6 @@ class GameDevToolkit:
         handler,
     ) -> None:
         self.methods.register(name, description, tags, handler)
+
+    def assign_quest_to_entity(self, entity_id: str, quest_id: str) -> bool:
+        return self.world.assign_quest(entity_id, quest_id)

@@ -40,6 +40,11 @@ class Move(Action):
         if not actor:
             return {"status": "error", "detail": "actor_not_found"}
         actor.area = self.destination
+        world.log_event("move", f"{actor.entity_id}:{self.destination}", actor.entity_id)
+        world.update_entity_quest_progress(
+            actor.entity_id,
+            f"travel:{self.destination}",
+        )
         return {"status": "ok", "detail": f"moved_to:{self.destination}"}
 
 
@@ -57,6 +62,21 @@ class Attack(Action):
         if not target:
             return {"status": "error", "detail": "target_not_found"}
         target.hp = max(0, target.hp - self.damage)
+        world.log_event(
+            "attack",
+            f"{self.actor_id}:{target.entity_id}:{self.damage}",
+            self.actor_id,
+        )
+        if not target.is_alive():
+            world.update_entity_quest_progress(
+                self.actor_id,
+                f"defeat:{target.entity_id}",
+            )
+            for tag in target.tags:
+                world.update_entity_quest_progress(
+                    self.actor_id,
+                    f"defeat_tag:{tag}",
+                )
         return {"status": "ok", "detail": f"hit:{target.entity_id}:{self.damage}"}
 
 
@@ -70,6 +90,16 @@ class Gather(Action):
         if not actor:
             return {"status": "error", "detail": "actor_not_found"}
         actor.inventory[self.resource] = actor.inventory.get(self.resource, 0) + self.amount
+        world.log_event(
+            "gather",
+            f"{actor.entity_id}:{self.resource}:{self.amount}",
+            actor.entity_id,
+        )
+        world.update_entity_quest_progress(
+            actor.entity_id,
+            f"gather:{self.resource}",
+            self.amount,
+        )
         return {"status": "ok", "detail": f"gathered:{self.resource}:{self.amount}"}
 
 
@@ -90,6 +120,15 @@ class Craft(Action):
         for item, qty in requirements.items():
             actor.inventory[item] -= qty
         actor.inventory[self.output] = actor.inventory.get(self.output, 0) + 1
+        world.log_event(
+            "craft",
+            f"{actor.entity_id}:{self.output}",
+            actor.entity_id,
+        )
+        world.update_entity_quest_progress(
+            actor.entity_id,
+            f"craft:{self.output}",
+        )
         return {"status": "ok", "detail": f"crafted:{self.output}"}
 
 
@@ -101,4 +140,29 @@ class Chat(Action):
         actor = world.get_entity(self.actor_id)
         if not actor:
             return {"status": "error", "detail": "actor_not_found"}
+        world.log_event(
+            "chat",
+            f"{actor.entity_id}:{self.message}",
+            actor.entity_id,
+        )
         return {"status": "ok", "detail": f"chat:{actor.name}:{self.message}"}
+
+
+@dataclass
+class AcceptQuest(Action):
+    quest_id: str = ""
+
+    def can_execute(self, world: WorldState) -> bool:
+        if not super().can_execute(world):
+            return False
+        return self.quest_id in world.quests
+
+    def execute(self, world: WorldState) -> Dict[str, str]:
+        if not world.assign_quest(self.actor_id, self.quest_id):
+            return {"status": "error", "detail": "quest_unavailable"}
+        world.log_event(
+            "quest_accept",
+            f"{self.actor_id}:{self.quest_id}",
+            self.actor_id,
+        )
+        return {"status": "ok", "detail": f"quest_accepted:{self.quest_id}"}

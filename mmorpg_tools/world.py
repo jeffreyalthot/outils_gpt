@@ -26,6 +26,7 @@ class Entity:
     mana: int = 50
     inventory: Dict[str, int] = field(default_factory=dict)
     tags: List[str] = field(default_factory=list)
+    quest_log: Dict[str, "QuestProgress"] = field(default_factory=dict)
 
     def is_alive(self) -> bool:
         return self.hp > 0
@@ -53,12 +54,41 @@ class Quest:
 
 
 @dataclass
+class QuestProgress:
+    """Tracks quest progress for a specific entity."""
+
+    quest_id: str
+    progress: Dict[str, int] = field(default_factory=dict)
+    completed: bool = False
+
+    def update(self, quest: Quest, objective: str, amount: int = 1) -> None:
+        current = self.progress.get(objective, 0)
+        self.progress[objective] = current + amount
+        if all(
+            self.progress.get(key, 0) >= required
+            for key, required in quest.objectives.items()
+        ):
+            self.completed = True
+
+
+@dataclass
+class WorldEvent:
+    """Represents a logged event in the world."""
+
+    tick: int
+    kind: str
+    detail: str
+    actor_id: Optional[str] = None
+
+
+@dataclass
 class WorldState:
     """Container for current world data."""
 
     areas: Dict[str, Area] = field(default_factory=dict)
     entities: Dict[str, Entity] = field(default_factory=dict)
     quests: Dict[str, Quest] = field(default_factory=dict)
+    events: List[WorldEvent] = field(default_factory=list)
     clock: int = 0
 
     def add_area(self, area: Area) -> None:
@@ -72,6 +102,37 @@ class WorldState:
 
     def get_entity(self, entity_id: str) -> Optional[Entity]:
         return self.entities.get(entity_id)
+
+    def assign_quest(self, entity_id: str, quest_id: str) -> bool:
+        entity = self.entities.get(entity_id)
+        quest = self.quests.get(quest_id)
+        if not entity or not quest:
+            return False
+        if quest_id in entity.quest_log:
+            return False
+        entity.quest_log[quest_id] = QuestProgress(quest_id=quest_id)
+        return True
+
+    def update_entity_quest_progress(
+        self,
+        entity_id: str,
+        objective: str,
+        amount: int = 1,
+    ) -> None:
+        entity = self.entities.get(entity_id)
+        if not entity:
+            return
+        for quest_id, progress in entity.quest_log.items():
+            quest = self.quests.get(quest_id)
+            if not quest or progress.completed:
+                continue
+            if objective in quest.objectives:
+                progress.update(quest, objective, amount)
+
+    def log_event(self, kind: str, detail: str, actor_id: Optional[str] = None) -> None:
+        self.events.append(
+            WorldEvent(tick=self.clock, kind=kind, detail=detail, actor_id=actor_id)
+        )
 
     def tick(self) -> None:
         self.clock += 1
