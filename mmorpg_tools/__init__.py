@@ -1,8 +1,8 @@
 """AI-driven MMORPG development toolkit."""
 
 from .engine import GameEngine
-from .world import WorldState, Area, Entity, Quest
-from .actions import Action, Move, Attack, Gather, Craft, Chat
+from .world import WorldState, Area, Entity, Quest, QuestProgress, WorldEvent
+from .actions import Action, Move, Attack, Gather, Craft, Chat, AcceptQuest
 from .ai import AgentBrain, RuleBasedBrain
 from .knowledge import MethodLibrary
 from .devtools import GameDevToolkit
@@ -13,12 +13,15 @@ __all__ = [
     "Area",
     "Entity",
     "Quest",
+    "QuestProgress",
+    "WorldEvent",
     "Action",
     "Move",
     "Attack",
     "Gather",
     "Craft",
     "Chat",
+    "AcceptQuest",
     "AgentBrain",
     "RuleBasedBrain",
     "MethodLibrary",
