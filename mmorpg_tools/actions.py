@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 from .world import WorldState
@@ -107,17 +107,16 @@ class Gather(Action):
 class Craft(Action):
     recipe: str = ""
     output: str = ""
-    requirements: Dict[str, int] = None
+    requirements: Dict[str, int] = field(default_factory=dict)
 
     def execute(self, world: WorldState) -> Dict[str, str]:
         actor = world.get_entity(self.actor_id)
         if not actor:
             return {"status": "error", "detail": "actor_not_found"}
-        requirements = self.requirements or {}
-        for item, qty in requirements.items():
+        for item, qty in self.requirements.items():
             if actor.inventory.get(item, 0) < qty:
                 return {"status": "error", "detail": "missing_materials"}
-        for item, qty in requirements.items():
+        for item, qty in self.requirements.items():
             actor.inventory[item] -= qty
         actor.inventory[self.output] = actor.inventory.get(self.output, 0) + 1
         world.log_event(
