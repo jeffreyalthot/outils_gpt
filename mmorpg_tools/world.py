@@ -13,6 +13,7 @@ class Area:
     name: str
     description: str
     neighbors: List[str] = field(default_factory=list)
+    resources: Dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -103,6 +104,14 @@ class WorldState:
     def get_entity(self, entity_id: str) -> Optional[Entity]:
         return self.entities.get(entity_id)
 
+    def get_entities_in_area(self, area_name: str) -> List[Entity]:
+        return [entity for entity in self.entities.values() if entity.area == area_name]
+
+    def get_recent_events(self, limit: int = 5) -> List[WorldEvent]:
+        if limit <= 0:
+            return []
+        return self.events[-limit:]
+
     def assign_quest(self, entity_id: str, quest_id: str) -> bool:
         entity = self.entities.get(entity_id)
         quest = self.quests.get(quest_id)
@@ -112,6 +121,15 @@ class WorldState:
             return False
         entity.quest_log[quest_id] = QuestProgress(quest_id=quest_id)
         return True
+
+    def adjust_area_resource(self, area_name: str, resource: str, delta: int) -> int:
+        area = self.areas.get(area_name)
+        if not area:
+            return 0
+        current = area.resources.get(resource, 0)
+        new_value = max(0, current + delta)
+        area.resources[resource] = new_value
+        return new_value
 
     def update_entity_quest_progress(
         self,

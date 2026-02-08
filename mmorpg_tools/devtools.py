@@ -16,8 +16,19 @@ class GameDevToolkit:
     world: WorldState
     methods: MethodLibrary
 
-    def create_area(self, name: str, description: str, neighbors: Iterable[str]) -> Area:
-        area = Area(name=name, description=description, neighbors=list(neighbors))
+    def create_area(
+        self,
+        name: str,
+        description: str,
+        neighbors: Iterable[str],
+        resources: dict | None = None,
+    ) -> Area:
+        area = Area(
+            name=name,
+            description=description,
+            neighbors=list(neighbors),
+            resources=dict(resources or {}),
+        )
         self.world.add_area(area)
         return area
 
